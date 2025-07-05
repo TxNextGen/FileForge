@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileForge</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="images/forge.png" type="image/x-icon" />
+
+</head>
+<body>
+     <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="images/forge.png" alt="FileForge Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>FileForge</h1>
+                    <span class="tagline">Transform any file, anywhere</span>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="index.html">Converter</a>
+                <a href="">Features</a>
+                <a href="about.html">About</a>
+            </nav>
+        </header>
+
+
+
+        <main class="main-content">
+            <section class="converter-section" id="converter">
+                <div class="converter-header">
+                    <h2>Upload & Convert Your Files</h2>
+                    <p>Support for images, documents, audio, and video files</p>
+                </div>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </div>
+                        <h3>Drop files here or click to browse</h3>
+                        <p>Maximum file size: 100MB</p>
+                        <button class="browse-btn" type="button">Browse Files</button>
+                    </div>
+                    <input type="file" id="fileInput" multiple hidden>
+                </div>
+                <div class="file-list" id="fileList" style="display: none;">
+                    <h3>Selected Files</h3>
+                    <div class="files-container" id="filesContainer">
+                    </div>
+                </div>
+                <div class="conversion-options" id="conversionOptions" style="display: none;">
+                    <div class="options-header">
+                        <h3>Conversion Settings</h3>
+                    </div>
+                    
+                    <div class="format-selection">
+                        <label for="outputFormat">Convert to:</label>
+                        <select id="outputFormat" class="format-select">
+                            <option value="">Select format...</option>
+                            <optgroup label="Images">
+                                <option value="jpg">JPG</option>
+                                <option value="png">PNG</option>
+                                <option value="gif">GIF</option>
+                                <option value="webp">WebP</option>
+                                <option value="bmp">BMP</option>
+                                <option value="svg">SVG</option>
+                            </optgroup>
+                            <optgroup label="Documents">
+                                <option value="pdf">PDF</option>
+                                <option value="docx">DOCX</option>
+                                <option value="txt">TXT</option>
+                                <option value="rtf">RTF</option>
+                            </optgroup>
+                            <optgroup label="Audio">
+                                <option value="mp3">MP3</option>
+                                <option value="wav">WAV</option>
+                                <option value="flac">FLAC</option>
+                                <option value="aac">AAC</option>
+                            </optgroup>
+                            <optgroup label="Video">
+                                <option value="mp4">MP4</option>
+                                <option value="avi">AVI</option>
+                                <option value="mov">MOV</option>
+                                <option value="mkv">MKV</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="quality-settings">
+                        <label for="quality">Quality:</label>
+                        <div class="quality-slider">
+                            <input type="range" id="quality" min="1" max="100" value="80">
+                            <span class="quality-value">80%</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="convert-btn" id="convertBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23,4 23,10 17,10"/>
+                                <polyline points="1,20 1,14 7,14"/>
+                                <path d="M20.49,9A9,9,0,0,0,5.64,5.64L1,10"/>
+                                <path d="M3.51,15a9,9,0,0,0,14.85,3.36L23,14"/>
+                            </svg>
+                            Convert Files
+                        </button>
+                        <button class="clear-btn" id="clearBtn">Clear All</button>
+                    </div>
+                </div>
+                <div class="progress-section" id="progressSection" style="display: none;">
+                    <h3>Converting Files...</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">0% Complete</p>
+                </div>
+                <div class="download-section" id="downloadSection" style="display: none;">
+                    <h3>Download Converted Files</h3>
+                    <div class="download-list" id="downloadList">
+                    </div>
+                    <button class="download-all-btn" id="downloadAllBtn">Download All as ZIP</button>
+                </div>
+            </section>
+        </main>
+        <section class="features" id="features">
+            <div class="features-container">
+                <h2>Why Choose FileForge?</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M8 12l2 2 4-4"/>
+                            </svg>
+                        </div>
+                        <h3>High Quality</h3>
+                        <p>Preserve quality while converting between formats</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                        </div>
+                        <h3>Fast Processing</h3>
+                        <p>Convert files quickly with our optimized algorithms</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <h3>Secure & Private</h3>
+                        <p>Your files are processed securely and deleted after conversion</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <h3>Multiple Formats</h3>
+                        <p>Support for images, documents, audio, and video files</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>FileForge</h3>
+                    <p>The ultimate file conversion tool for all your needs.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Converter</a></li>
+                        <li><a href="">Features</a></li>
+                        <li><a href="about.html">About</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="">Help Center</a></li>
+                        <li><a href="">Contact Us</a></li>
+                        <li><a href="">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 FileForge. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/upload.js"></script>
+</body>
+</html>

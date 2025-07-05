@@ -1,0 +1,9 @@
+Flask
+flask-cors
+Pillow
+pillow-heif
+python-docx
+PyPDF2
+reportlab
+mammoth
+pydub
