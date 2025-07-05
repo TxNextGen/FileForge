@@ -1,11 +1,20 @@
-Flask
-flask-cors
-Pillow
-pillow-heif
-python-docx
-PyPDF2
-reportlab
-mammoth
-pydub
-pyaudioop
-Werkzeug
+# Core Flask dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+Werkzeug==2.3.7
+
+# Image processing
+Pillow==10.0.1
+pillow-heif==0.13.0
+
+# Document processing
+python-docx==0.8.11
+PyPDF2==3.0.1
+reportlab==4.0.4
+mammoth==1.6.0
+
+# Audio processing - make optional
+# pydub==0.25.1
+
+# System dependencies
+gunicorn==21.2.0

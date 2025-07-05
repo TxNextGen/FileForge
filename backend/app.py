@@ -26,12 +26,19 @@ from reportlab.lib.pagesizes import letter
 import mammoth
 
 
+AUDIO_SUPPORTED = False
 try:
+
+    import pydub
     from pydub import AudioSegment
     AUDIO_SUPPORTED = True
+    print("Audio conversion is available")
 except ImportError as e:
+    print(f"Audio conversion not available: {e}")
     AUDIO_SUPPORTED = False
-    print(f"Warning: Audio conversion not available: {e}")
+except Exception as e:
+    print(f"Audio conversion setup failed: {e}")
+    AUDIO_SUPPORTED = False
 
 app = Flask(__name__)
 CORS(app)
@@ -111,7 +118,7 @@ class FileConverter:
         """Convert image files"""
         try:
             with Image.open(input_path) as img:
-                
+              
                 if output_format.lower() in ['jpg', 'jpeg'] and img.mode in ['RGBA', 'LA']:
                     background = Image.new('RGB', img.size, (255, 255, 255))
                     if img.mode == 'RGBA':
@@ -120,17 +127,17 @@ class FileConverter:
                         background.paste(img)
                     img = background
                 
-        
+         
                 if resize:
                     if maintain_aspect:
                         img.thumbnail(resize, Image.Resampling.LANCZOS)
                     else:
                         img = img.resize(resize, Image.Resampling.LANCZOS)
                 
-              
+       
                 img = ImageOps.exif_transpose(img)
                 
-       
+             
                 save_params = {'format': output_format.upper()}
                 
                 if output_format.lower() in ['jpg', 'jpeg']:
@@ -184,14 +191,15 @@ class FileConverter:
     def _convert_audio(self, input_path: str, output_path: str, 
                       output_format: str, quality: int = 85, 
                       bitrate: Optional[str] = None) -> Dict:
-        """Convert audio files"""
+        """Convert audio files using FFmpeg as fallback"""
         if not AUDIO_SUPPORTED:
-            return {'success': False, 'error': 'Audio conversion not available in this environment'}
+
+            return self._convert_audio_ffmpeg(input_path, output_path, output_format, quality, bitrate)
             
         try:
             audio = AudioSegment.from_file(input_path)
             
-
+         
             if not bitrate:
                 if quality >= 90:
                     bitrate = "320k"
@@ -207,7 +215,7 @@ class FileConverter:
                 'bitrate': bitrate
             }
             
-           
+            
             if output_format.lower() == 'mp3':
                 export_params['parameters'] = ['-q:a', str(9 - int(quality/10))]
             elif output_format.lower() == 'ogg':
@@ -225,6 +233,63 @@ class FileConverter:
             
         except Exception as e:
             logger.error(f"Audio conversion error: {str(e)}")
+          
+            return self._convert_audio_ffmpeg(input_path, output_path, output_format, quality, bitrate)
+
+    def _convert_audio_ffmpeg(self, input_path: str, output_path: str, 
+                             output_format: str, quality: int = 85, 
+                             bitrate: Optional[str] = None) -> Dict:
+        """Convert audio files using FFmpeg"""
+        try:
+     
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+            
+            cmd = ['ffmpeg', '-i', input_path, '-y']
+            
+         
+            if not bitrate:
+                if quality >= 90:
+                    bitrate = "320k"
+                elif quality >= 70:
+                    bitrate = "192k"
+                elif quality >= 50:
+                    bitrate = "128k"
+                else:
+                    bitrate = "96k"
+            
+            cmd.extend(['-b:a', bitrate])
+            
+     
+            if output_format.lower() == 'mp3':
+                cmd.extend(['-codec:a', 'libmp3lame'])
+            elif output_format.lower() == 'ogg':
+                cmd.extend(['-codec:a', 'libvorbis'])
+            elif output_format.lower() == 'aac':
+                cmd.extend(['-codec:a', 'aac'])
+            elif output_format.lower() == 'wav':
+                cmd.extend(['-codec:a', 'pcm_s16le'])
+            
+            cmd.append(output_path)
+            
+        
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode != 0:
+                raise Exception(f"FFmpeg error: {result.stderr}")
+            
+            return {
+                'success': True,
+                'output_size': os.path.getsize(output_path),
+                'format': output_format.upper(),
+                'bitrate': bitrate
+            }
+            
+        except subprocess.CalledProcessError:
+            return {'success': False, 'error': 'FFmpeg not available for audio conversion'}
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'error': 'Audio conversion timeout'}
+        except Exception as e:
+            logger.error(f"Audio conversion error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
     def _convert_video(self, input_path: str, output_path: str, 
@@ -233,9 +298,12 @@ class FileConverter:
                       fps: Optional[int] = None) -> Dict:
         """Convert video files using FFmpeg"""
         try:
+      
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+            
             cmd = ['ffmpeg', '-i', input_path, '-y']
             
-
+        
             if quality >= 90:
                 cmd.extend(['-crf', '18'])
             elif quality >= 70:
@@ -249,11 +317,11 @@ class FileConverter:
             if resolution:
                 cmd.extend(['-vf', f'scale={resolution}'])
             
-     
+
             if fps:
                 cmd.extend(['-r', str(fps)])
             
-    
+       
             if output_format.lower() == 'mp4':
                 cmd.extend(['-codec:v', 'libx264', '-codec:a', 'aac'])
             elif output_format.lower() == 'webm':
@@ -263,7 +331,7 @@ class FileConverter:
             
             cmd.append(output_path)
             
-      
+         
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode != 0:
@@ -276,6 +344,8 @@ class FileConverter:
                 'quality': quality
             }
             
+        except subprocess.CalledProcessError:
+            return {'success': False, 'error': 'FFmpeg not available for video conversion'}
         except subprocess.TimeoutExpired:
             logger.error("Video conversion timeout")
             return {'success': False, 'error': 'Video conversion timeout'}
@@ -297,7 +367,7 @@ class FileConverter:
                     'format': 'PDF'
                 }
             except ImportError:
-       
+   
                 doc = Document(input_path)
                 
                 c = canvas.Canvas(output_path, pagesize=letter)
@@ -305,7 +375,7 @@ class FileConverter:
                 
                 for paragraph in doc.paragraphs:
                     if paragraph.text.strip():
-                    
+                       
                         text = paragraph.text[:80]
                         c.drawString(50, y, text)
                         y -= 20
@@ -371,7 +441,7 @@ class FileConverter:
             
             with open(input_path, 'r', encoding='utf-8') as txt_file:
                 for line in txt_file:
-             
+               
                     text = line.strip()[:80]
                     c.drawString(50, y, text)
                     y -= 20
@@ -424,7 +494,7 @@ converter = FileConverter()
 def convert_file():
     """Convert a single file"""
     try:
-     
+   
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
         
@@ -432,7 +502,7 @@ def convert_file():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-    
+      
         output_format = request.form.get('format', '').lower()
         quality = int(request.form.get('quality', 85))
         
@@ -441,22 +511,18 @@ def convert_file():
         fps = request.form.get('fps')
         bitrate = request.form.get('bitrate')
         
-  
+
         if not output_format:
             return jsonify({'error': 'Output format not specified'}), 400
         
         if not converter.is_supported_file(file.filename):
             return jsonify({'error': 'Unsupported file type'}), 400
         
-        
-        if converter.get_file_type(file.filename) == 'audio' and not AUDIO_SUPPORTED:
-            return jsonify({'error': 'Audio conversion not available in this environment'}), 400
-        
-   
+    
         if file.content_length and file.content_length > MAX_FILE_SIZE:
             return jsonify({'error': 'File too large'}), 400
         
-    
+
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_filename = f"{timestamp}_{filename}"
@@ -464,12 +530,12 @@ def convert_file():
         input_path = os.path.join(UPLOAD_FOLDER, unique_filename)
         file.save(input_path)
         
-    
+      
         name_without_ext = os.path.splitext(filename)[0]
         output_filename = f"{name_without_ext}_converted.{output_format}"
         output_path = os.path.join(OUTPUT_FOLDER, f"{timestamp}_{output_filename}")
         
-      
+     
         conv_params = {'quality': quality}
         
         if resize:
@@ -491,18 +557,18 @@ def convert_file():
         if bitrate:
             conv_params['bitrate'] = bitrate
         
-   
+     
         result = converter.convert_file(
             input_path, output_path, output_format, **conv_params
         )
         
-   
+    
         try:
             os.remove(input_path)
         except:
             pass
         
-    
+      
         if result['success']:
             return jsonify({
                 'success': True,
@@ -578,7 +644,7 @@ def batch_convert():
                     input_path, output_path, output_format, quality=quality
                 )
                 
-      
+           
                 try:
                     os.remove(input_path)
                 except:
@@ -640,15 +706,15 @@ def cleanup_old_files():
         try:
             now = time.time()
             
-        
+         
             for filename in os.listdir(UPLOAD_FOLDER):
                 file_path = os.path.join(UPLOAD_FOLDER, filename)
                 if os.path.isfile(file_path):
-                    if now - os.path.getmtime(file_path) > 3600:  # 1 hour
+                    if now - os.path.getmtime(file_path) > 3600: 
                         os.remove(file_path)
                         logger.info(f"Cleaned up old upload: {filename}")
             
-            
+          
             for filename in os.listdir(OUTPUT_FOLDER):
                 file_path = os.path.join(OUTPUT_FOLDER, filename)
                 if os.path.isfile(file_path):
@@ -659,7 +725,7 @@ def cleanup_old_files():
         except Exception as e:
             logger.error(f"Cleanup error: {str(e)}")
         
-
+     
         time.sleep(300)
 
 
