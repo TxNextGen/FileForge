@@ -3,13 +3,13 @@ class FileConverter {
         this.selectedFiles = [];
         this.convertedFiles = [];
         this.supportedFormats = {
-            images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'heic', 'heif'],
-            documents: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'html'],
-            audio: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'],
-            video: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', 'ogv']
+            images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'heic', 'heif'],
+            documents: ['pdf', 'doc', 'docx', 'txt', 'html'],
+            video: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm']
         };
         
-        this.backendUrl = 'https://your-app-name.onrender.com'; 
+        this.backendUrl = 'https://fileforge4.onrender.com'; 
+        this.audioSupported = false; 
         
         this.init();
     }
@@ -93,6 +93,7 @@ class FileConverter {
             if (response.ok) {
                 const formats = await response.json();
                 this.supportedFormats = formats;
+                console.log('Loaded supported formats:', this.supportedFormats);
             }
         } catch (error) {
             console.warn('Could not load supported formats from backend, using defaults');
@@ -113,7 +114,7 @@ class FileConverter {
                     extension: this.getFileExtension(file.name)
                 });
             } else {
-                this.showNotification(`File "${file.name}" is not supported`, 'error');
+                this.showNotification(`File "${file.name}" is not supported or exceeds size limit (50MB)`, 'error');
             }
         });
 
@@ -126,11 +127,16 @@ class FileConverter {
         const allFormats = [
             ...this.supportedFormats.images,
             ...this.supportedFormats.documents,
-            ...this.supportedFormats.audio,
             ...this.supportedFormats.video
         ];
         
-        return allFormats.includes(extension) && file.size <= 100 * 1024 * 1024; // 100MB limit
+        // Add audio formats if supported
+        if (this.supportedFormats.audio) {
+            allFormats.push(...this.supportedFormats.audio);
+        }
+        
+        const maxSize = 50 * 1024 * 1024; // 50MB limit to match backend
+        return allFormats.includes(extension) && file.size <= maxSize;
     }
 
     getFileExtension(filename) {
@@ -252,6 +258,7 @@ class FileConverter {
         const selectedTypes = [...new Set(this.selectedFiles.map(file => this.getFileType(file.extension)))];
         formatSelect.innerHTML = '<option value="">Select output format</option>';
         const formatOptions = new Set();
+        
         selectedTypes.forEach(type => {
             if (this.supportedFormats[type]) {
                 this.supportedFormats[type].forEach(format => {
@@ -344,6 +351,8 @@ class FileConverter {
         formData.append('file', fileData.file);
         formData.append('format', outputFormat);
         formData.append('quality', quality);
+        
+        // Add optional parameters based on file type
         const resize = document.getElementById('resize')?.value;
         const resolution = document.getElementById('resolution')?.value;
         const fps = document.getElementById('fps')?.value;
@@ -373,7 +382,8 @@ class FileConverter {
             format: outputFormat,
             quality: quality,
             downloadUrl: `${this.backendUrl}${result.download_url}`,
-            conversionInfo: result.conversion_info
+            conversionInfo: result.conversion_info,
+            success: true
         };
         
         this.convertedFiles.push(convertedFile);
@@ -479,7 +489,6 @@ class FileConverter {
             ` : ''}
         `;
         
-        
         const downloadBtn = downloadItem.querySelector('.download-btn');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => {
@@ -493,7 +502,6 @@ class FileConverter {
 
     async downloadFile(filename, url) {
         try {
-        
             const link = document.createElement('a');
             link.href = url;
             link.download = filename;
@@ -512,10 +520,10 @@ class FileConverter {
     downloadAll() {
         const successfulFiles = this.convertedFiles.filter(file => file.success !== false);
         
-        successfulFiles.forEach(file => {
+        successfulFiles.forEach((file, index) => {
             setTimeout(() => {
                 this.downloadFile(file.convertedName, file.downloadUrl);
-            }, 100); 
+            }, index * 500); // Increased delay to 500ms
         });
         
         this.showNotification(`Downloading ${successfulFiles.length} files`, 'success');
@@ -540,6 +548,13 @@ class FileConverter {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Backend health check:', data);
+                
+                // Update audio support based on backend response
+                this.audioSupported = data.audio_support;
+                if (this.audioSupported && data.supported_formats.audio) {
+                    this.supportedFormats.audio = data.supported_formats.audio;
+                }
+                
                 return true;
             }
             return false;
@@ -558,8 +573,11 @@ class FileConverter {
                 <button class="notification-close">×</button>
             </div>
         `;
+        
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => notification.remove());
+        
+        // Add styles if not already present
         if (!document.getElementById('notification-styles')) {
             const style = document.createElement('style');
             style.id = 'notification-styles';
@@ -630,16 +648,26 @@ class FileConverter {
     }
 }
 
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
     window.fileConverter = new FileConverter();
     const isHealthy = await window.fileConverter.checkBackendHealth();
+    
     if (!isHealthy) {
         window.fileConverter.showNotification('Backend connection failed. Please check your server.', 'warning');
+    } else {
+        // Show audio support status
+        if (window.fileConverter.audioSupported) {
+            console.log('Audio conversion is available');
+        } else {
+            console.log('Audio conversion is not available on this server');
+        }
     }
 });
 
+// Utility classes for file validation and presets
 class FileValidation {
-    static validateFileSize(file, maxSize = 100 * 1024 * 1024) {
+    static validateFileSize(file, maxSize = 50 * 1024 * 1024) { // Changed to 50MB
         return file.size <= maxSize;
     }
 
@@ -671,6 +699,7 @@ class ConversionPresets {
     }
 }
 
+// Export for module environments
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { FileConverter, FileValidation, ConversionPresets };
 }
