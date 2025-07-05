@@ -3,13 +3,11 @@ class FileConverter {
         this.selectedFiles = [];
         this.convertedFiles = [];
         this.supportedFormats = {
-            images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'heic', 'heif'],
-            documents: ['pdf', 'doc', 'docx', 'txt', 'html'],
-            video: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm']
+            images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff'],
+            documents: ['txt', 'html'], // Limited to what we can handle client-side
+            audio: [], // Not supported client-side
+            video: [] // Not supported client-side
         };
-        
-        this.backendUrl = 'https://fileforge4.onrender.com'; 
-        this.audioSupported = false; 
         
         this.init();
     }
@@ -18,7 +16,6 @@ class FileConverter {
         this.setupEventListeners();
         this.setupDragAndDrop();
         this.setupQualitySlider();
-        this.loadSupportedFormats();
     }
 
     setupEventListeners() {
@@ -28,18 +25,25 @@ class FileConverter {
 
         browseBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+        
         const convertBtn = document.getElementById('convertBtn');
         convertBtn.addEventListener('click', () => this.startConversion());
+        
         const clearBtn = document.getElementById('clearBtn');
         clearBtn.addEventListener('click', () => this.clearAllFiles());
+        
         const formatSelect = document.getElementById('outputFormat');
         formatSelect.addEventListener('change', () => this.validateConversion());
+        
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         downloadAllBtn.addEventListener('click', () => this.downloadAll());
+        
         const batchConvertBtn = document.getElementById('batchConvertBtn');
         if (batchConvertBtn) {
             batchConvertBtn.addEventListener('click', () => this.startBatchConversion());
         }
+        
+        // Smooth scrolling for navigation
         document.querySelectorAll('.nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 const href = link.getAttribute('href');
@@ -82,21 +86,10 @@ class FileConverter {
         const qualitySlider = document.getElementById('quality');
         const qualityValue = document.querySelector('.quality-value');
 
-        qualitySlider.addEventListener('input', (e) => {
-            qualityValue.textContent = `${e.target.value}%`;
-        });
-    }
-
-    async loadSupportedFormats() {
-        try {
-            const response = await fetch(`${this.backendUrl}/api/formats`);
-            if (response.ok) {
-                const formats = await response.json();
-                this.supportedFormats = formats;
-                console.log('Loaded supported formats:', this.supportedFormats);
-            }
-        } catch (error) {
-            console.warn('Could not load supported formats from backend, using defaults');
+        if (qualitySlider && qualityValue) {
+            qualitySlider.addEventListener('input', (e) => {
+                qualityValue.textContent = `${e.target.value}%`;
+            });
         }
     }
 
@@ -114,7 +107,7 @@ class FileConverter {
                     extension: this.getFileExtension(file.name)
                 });
             } else {
-                this.showNotification(`File "${file.name}" is not supported or exceeds size limit (50MB)`, 'error');
+                this.showNotification(`File "${file.name}" is not supported for client-side conversion`, 'error');
             }
         });
 
@@ -126,17 +119,10 @@ class FileConverter {
         const extension = this.getFileExtension(file.name).toLowerCase();
         const allFormats = [
             ...this.supportedFormats.images,
-            ...this.supportedFormats.documents,
-            ...this.supportedFormats.video
+            ...this.supportedFormats.documents
         ];
         
-        // Add audio formats if supported
-        if (this.supportedFormats.audio) {
-            allFormats.push(...this.supportedFormats.audio);
-        }
-        
-        const maxSize = 50 * 1024 * 1024; // 50MB limit to match backend
-        return allFormats.includes(extension) && file.size <= maxSize;
+        return allFormats.includes(extension) && file.size <= 1024 * 1024 * 1024; // 1GB limit
     }
 
     getFileExtension(filename) {
@@ -257,8 +243,8 @@ class FileConverter {
         const formatSelect = document.getElementById('outputFormat');
         const selectedTypes = [...new Set(this.selectedFiles.map(file => this.getFileType(file.extension)))];
         formatSelect.innerHTML = '<option value="">Select output format</option>';
-        const formatOptions = new Set();
         
+        const formatOptions = new Set();
         selectedTypes.forEach(type => {
             if (this.supportedFormats[type]) {
                 this.supportedFormats[type].forEach(format => {
@@ -290,7 +276,7 @@ class FileConverter {
 
     async startConversion() {
         const outputFormat = document.getElementById('outputFormat').value;
-        const quality = document.getElementById('quality').value;
+        const quality = document.getElementById('quality').value || 80;
 
         if (!outputFormat) {
             this.showNotification('Please select an output format', 'error');
@@ -322,125 +308,185 @@ class FileConverter {
     }
 
     async startBatchConversion() {
-        const outputFormat = document.getElementById('outputFormat').value;
-        const quality = document.getElementById('quality').value;
-
-        if (!outputFormat) {
-            this.showNotification('Please select an output format', 'error');
-            return;
-        }
-
-        this.showProgressSection();
-        this.hideConversionOptions();
-
-        try {
-            await this.convertBatchFiles(outputFormat, quality);
-            this.showDownloadSection();
-            this.showNotification('Batch conversion completed!', 'success');
-            
-        } catch (error) {
-            console.error('Batch conversion failed:', error);
-            this.showNotification('Batch conversion failed. Please try again.', 'error');
-            this.hideProgressSection();
-            this.showConversionOptions();
-        }
+        // For client-side, batch conversion is the same as regular conversion
+        await this.startConversion();
     }
 
     async convertSingleFile(fileData, outputFormat, quality) {
-        const formData = new FormData();
-        formData.append('file', fileData.file);
-        formData.append('format', outputFormat);
-        formData.append('quality', quality);
+        const fileType = this.getFileType(fileData.extension);
         
-        // Add optional parameters based on file type
-        const resize = document.getElementById('resize')?.value;
-        const resolution = document.getElementById('resolution')?.value;
-        const fps = document.getElementById('fps')?.value;
-        const bitrate = document.getElementById('bitrate')?.value;
-
-        if (resize) formData.append('resize', resize);
-        if (resolution) formData.append('resolution', resolution);
-        if (fps) formData.append('fps', fps);
-        if (bitrate) formData.append('bitrate', bitrate);
-
-        const response = await fetch(`${this.backendUrl}/api/convert`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Conversion failed');
+        if (fileType === 'images') {
+            return await this.convertImage(fileData, outputFormat, quality);
+        } else if (fileType === 'documents') {
+            return await this.convertDocument(fileData, outputFormat);
+        } else {
+            throw new Error(`Unsupported file type: ${fileType}`);
         }
-
-        const result = await response.json();
-        
-        const convertedFile = {
-            originalName: fileData.name,
-            convertedName: result.filename,
-            size: result.file_size,
-            format: outputFormat,
-            quality: quality,
-            downloadUrl: `${this.backendUrl}${result.download_url}`,
-            conversionInfo: result.conversion_info,
-            success: true
-        };
-        
-        this.convertedFiles.push(convertedFile);
     }
 
-    async convertBatchFiles(outputFormat, quality) {
-        const formData = new FormData();
-        
-        this.selectedFiles.forEach(fileData => {
-            formData.append('files', fileData.file);
+    async convertImage(fileData, outputFormat, quality) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Set canvas dimensions
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw image on canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert to desired format
+                const mimeType = this.getImageMimeType(outputFormat);
+                const qualityValue = quality / 100;
+                
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const originalName = fileData.name;
+                        const baseName = originalName.substring(0, originalName.lastIndexOf('.'));
+                        const convertedName = `${baseName}_converted.${outputFormat}`;
+                        
+                        const convertedFile = {
+                            originalName: originalName,
+                            convertedName: convertedName,
+                            size: blob.size,
+                            format: outputFormat,
+                            quality: quality,
+                            blob: blob,
+                            downloadUrl: URL.createObjectURL(blob),
+                            success: true
+                        };
+                        
+                        this.convertedFiles.push(convertedFile);
+                        resolve(convertedFile);
+                    } else {
+                        reject(new Error('Failed to convert image'));
+                    }
+                }, mimeType, qualityValue);
+            };
+            
+            img.onerror = () => {
+                reject(new Error('Failed to load image'));
+            };
+            
+            img.src = URL.createObjectURL(fileData.file);
         });
-        
-        formData.append('format', outputFormat);
-        formData.append('quality', quality);
+    }
 
-        const response = await fetch(`${this.backendUrl}/api/batch-convert`, {
-            method: 'POST',
-            body: formData
+    async convertDocument(fileData, outputFormat) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    let content = e.target.result;
+                    let convertedContent;
+                    let mimeType;
+                    
+                    if (outputFormat === 'txt') {
+                        // Convert to plain text
+                        if (fileData.extension === 'html') {
+                            // Strip HTML tags for basic conversion
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = content;
+                            convertedContent = tempDiv.textContent || tempDiv.innerText || '';
+                        } else {
+                            convertedContent = content;
+                        }
+                        mimeType = 'text/plain';
+                    } else if (outputFormat === 'html') {
+                        // Convert to HTML
+                        if (fileData.extension === 'txt') {
+                            // Basic text to HTML conversion
+                            convertedContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converted Document</title>
+</head>
+<body>
+    <pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+</body>
+</html>`;
+                        } else {
+                            convertedContent = content;
+                        }
+                        mimeType = 'text/html';
+                    } else {
+                        throw new Error(`Unsupported document format: ${outputFormat}`);
+                    }
+                    
+                    const blob = new Blob([convertedContent], { type: mimeType });
+                    const originalName = fileData.name;
+                    const baseName = originalName.substring(0, originalName.lastIndexOf('.'));
+                    const convertedName = `${baseName}_converted.${outputFormat}`;
+                    
+                    const convertedFile = {
+                        originalName: originalName,
+                        convertedName: convertedName,
+                        size: blob.size,
+                        format: outputFormat,
+                        quality: 100,
+                        blob: blob,
+                        downloadUrl: URL.createObjectURL(blob),
+                        success: true
+                    };
+                    
+                    this.convertedFiles.push(convertedFile);
+                    resolve(convertedFile);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            reader.onerror = () => {
+                reject(new Error('Failed to read file'));
+            };
+            
+            reader.readAsText(fileData.file);
         });
+    }
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Batch conversion failed');
-        }
-
-        const result = await response.json();
-        
-        this.convertedFiles = result.results.map(item => ({
-            originalName: item.original_filename,
-            convertedName: item.converted_filename,
-            size: item.file_size,
-            format: outputFormat,
-            quality: quality,
-            downloadUrl: `${this.backendUrl}${item.download_url}`,
-            success: item.success,
-            error: item.error
-        }));
-        this.updateProgress(100);
+    getImageMimeType(format) {
+        const mimeTypes = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'bmp': 'image/bmp',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml',
+            'tiff': 'image/tiff'
+        };
+        return mimeTypes[format] || 'image/jpeg';
     }
 
     updateProgress(progress) {
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${Math.round(progress)}% Complete`;
+        if (progressFill && progressText) {
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `${Math.round(progress)}% Complete`;
+        }
     }
 
     showProgressSection() {
         const progressSection = document.getElementById('progressSection');
-        progressSection.style.display = 'block';
-        this.updateProgress(0);
+        if (progressSection) {
+            progressSection.style.display = 'block';
+            this.updateProgress(0);
+        }
     }
 
     hideProgressSection() {
         const progressSection = document.getElementById('progressSection');
-        progressSection.style.display = 'none';
+        if (progressSection) {
+            progressSection.style.display = 'none';
+        }
     }
 
     showDownloadSection() {
@@ -448,14 +494,18 @@ class FileConverter {
         const downloadSection = document.getElementById('downloadSection');
         const downloadList = document.getElementById('downloadList');
         
-        downloadList.innerHTML = '';
+        if (downloadList) {
+            downloadList.innerHTML = '';
+            
+            this.convertedFiles.forEach(file => {
+                const downloadItem = this.createDownloadItem(file);
+                downloadList.appendChild(downloadItem);
+            });
+        }
         
-        this.convertedFiles.forEach(file => {
-            const downloadItem = this.createDownloadItem(file);
-            downloadList.appendChild(downloadItem);
-        });
-        
-        downloadSection.style.display = 'block';
+        if (downloadSection) {
+            downloadSection.style.display = 'block';
+        }
     }
 
     createDownloadItem(file) {
@@ -478,7 +528,7 @@ class FileConverter {
                 </div>
             </div>
             ${file.success !== false ? `
-                <button class="download-btn" data-url="${file.downloadUrl}">
+                <button class="download-btn" data-filename="${file.convertedName}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="7,10 12,15 17,10"/>
@@ -492,15 +542,15 @@ class FileConverter {
         const downloadBtn = downloadItem.querySelector('.download-btn');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => {
-                const url = downloadBtn.getAttribute('data-url');
-                this.downloadFile(file.convertedName, url);
+                const filename = downloadBtn.getAttribute('data-filename');
+                this.downloadFile(filename, file.downloadUrl);
             });
         }
         
         return downloadItem;
     }
 
-    async downloadFile(filename, url) {
+    downloadFile(filename, url) {
         try {
             const link = document.createElement('a');
             link.href = url;
@@ -523,45 +573,37 @@ class FileConverter {
         successfulFiles.forEach((file, index) => {
             setTimeout(() => {
                 this.downloadFile(file.convertedName, file.downloadUrl);
-            }, index * 500); // Increased delay to 500ms
+            }, index * 200); // Stagger downloads
         });
         
         this.showNotification(`Downloading ${successfulFiles.length} files`, 'success');
     }
 
     clearAllFiles() {
+        // Clean up object URLs to prevent memory leaks
+        this.convertedFiles.forEach(file => {
+            if (file.downloadUrl) {
+                URL.revokeObjectURL(file.downloadUrl);
+            }
+        });
+        
         this.selectedFiles = [];
         this.convertedFiles = [];
         this.updateFileList();
         this.hideConversionOptions();
         this.hideProgressSection();
+        
         const downloadSection = document.getElementById('downloadSection');
-        downloadSection.style.display = 'none';
-        document.getElementById('fileInput').value = '';
+        if (downloadSection) {
+            downloadSection.style.display = 'none';
+        }
+        
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.value = '';
+        }
         
         this.showNotification('All files cleared', 'info');
-    }
-
-    async checkBackendHealth() {
-        try {
-            const response = await fetch(`${this.backendUrl}/api/health`);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Backend health check:', data);
-                
-                // Update audio support based on backend response
-                this.audioSupported = data.audio_support;
-                if (this.audioSupported && data.supported_formats.audio) {
-                    this.supportedFormats.audio = data.supported_formats.audio;
-                }
-                
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Backend health check failed:', error);
-            return false;
-        }
     }
 
     showNotification(message, type = 'info') {
@@ -636,6 +678,8 @@ class FileConverter {
         }
 
         document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
         setTimeout(() => {
             if (notification.parentElement) {
                 notification.remove();
@@ -648,26 +692,15 @@ class FileConverter {
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
     window.fileConverter = new FileConverter();
-    const isHealthy = await window.fileConverter.checkBackendHealth();
-    
-    if (!isHealthy) {
-        window.fileConverter.showNotification('Backend connection failed. Please check your server.', 'warning');
-    } else {
-        // Show audio support status
-        if (window.fileConverter.audioSupported) {
-            console.log('Audio conversion is available');
-        } else {
-            console.log('Audio conversion is not available on this server');
-        }
-    }
+    console.log('File Converter initialized - Client-side only');
 });
 
-// Utility classes for file validation and presets
+// Utility classes for validation and presets
 class FileValidation {
-    static validateFileSize(file, maxSize = 50 * 1024 * 1024) { // Changed to 50MB
+    static validateFileSize(file, maxSize = 1024 * 1024 * 1024) { // 1GB for client-side
         return file.size <= maxSize;
     }
 
@@ -699,7 +732,7 @@ class ConversionPresets {
     }
 }
 
-// Export for module environments
+// Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { FileConverter, FileValidation, ConversionPresets };
 }
