@@ -4,9 +4,9 @@ class FileConverter {
         this.convertedFiles = [];
         this.supportedFormats = {
             images: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff'],
-            documents: ['txt', 'html'], // Limited to what we can handle client-side
-            audio: [], // Not supported client-side
-            video: [] // Not supported client-side
+            documents: ['txt', 'html'], 
+            audio: [], 
+            video: [] 
         };
         
         this.init();
@@ -43,7 +43,7 @@ class FileConverter {
             batchConvertBtn.addEventListener('click', () => this.startBatchConversion());
         }
         
-        // Smooth scrolling for navigation
+       
         document.querySelectorAll('.nav a').forEach(link => {
             link.addEventListener('click', (e) => {
                 const href = link.getAttribute('href');
@@ -308,7 +308,6 @@ class FileConverter {
     }
 
     async startBatchConversion() {
-        // For client-side, batch conversion is the same as regular conversion
         await this.startConversion();
     }
 
@@ -331,14 +330,12 @@ class FileConverter {
             const img = new Image();
             
             img.onload = () => {
-                // Set canvas dimensions
                 canvas.width = img.width;
                 canvas.height = img.height;
                 
-                // Draw image on canvas
                 ctx.drawImage(img, 0, 0);
                 
-                // Convert to desired format
+            
                 const mimeType = this.getImageMimeType(outputFormat);
                 const qualityValue = quality / 100;
                 
@@ -386,9 +383,9 @@ class FileConverter {
                     let mimeType;
                     
                     if (outputFormat === 'txt') {
-                        // Convert to plain text
+             
                         if (fileData.extension === 'html') {
-                            // Strip HTML tags for basic conversion
+                        
                             const tempDiv = document.createElement('div');
                             tempDiv.innerHTML = content;
                             convertedContent = tempDiv.textContent || tempDiv.innerText || '';
@@ -397,9 +394,9 @@ class FileConverter {
                         }
                         mimeType = 'text/plain';
                     } else if (outputFormat === 'html') {
-                        // Convert to HTML
+                     
                         if (fileData.extension === 'txt') {
-                            // Basic text to HTML conversion
+                           
                             convertedContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -573,14 +570,13 @@ class FileConverter {
         successfulFiles.forEach((file, index) => {
             setTimeout(() => {
                 this.downloadFile(file.convertedName, file.downloadUrl);
-            }, index * 200); // Stagger downloads
+            }, index * 200); 
         });
         
         this.showNotification(`Downloading ${successfulFiles.length} files`, 'success');
     }
 
     clearAllFiles() {
-        // Clean up object URLs to prevent memory leaks
         this.convertedFiles.forEach(file => {
             if (file.downloadUrl) {
                 URL.revokeObjectURL(file.downloadUrl);
@@ -619,7 +615,7 @@ class FileConverter {
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => notification.remove());
         
-        // Add styles if not already present
+       
         if (!document.getElementById('notification-styles')) {
             const style = document.createElement('style');
             style.id = 'notification-styles';
@@ -679,7 +675,7 @@ class FileConverter {
 
         document.body.appendChild(notification);
         
-        // Auto-remove after 5 seconds
+     
         setTimeout(() => {
             if (notification.parentElement) {
                 notification.remove();
@@ -692,15 +688,15 @@ class FileConverter {
     }
 }
 
-// Initialize when DOM is ready
+
 document.addEventListener('DOMContentLoaded', () => {
     window.fileConverter = new FileConverter();
     console.log('File Converter initialized - Client-side only');
 });
 
-// Utility classes for validation and presets
+
 class FileValidation {
-    static validateFileSize(file, maxSize = 1024 * 1024 * 1024) { // 1GB for client-side
+    static validateFileSize(file, maxSize = 1024 * 1024 * 1024) { 
         return file.size <= maxSize;
     }
 
@@ -732,7 +728,7 @@ class ConversionPresets {
     }
 }
 
-// Export for module systems
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { FileConverter, FileValidation, ConversionPresets };
 }
