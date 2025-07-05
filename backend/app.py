@@ -25,10 +25,9 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import mammoth
 
-
+# Audio support - handle gracefully if not available
 AUDIO_SUPPORTED = False
 try:
-
     import pydub
     from pydub import AudioSegment
     AUDIO_SUPPORTED = True
@@ -43,33 +42,35 @@ except Exception as e:
 app = Flask(__name__)
 CORS(app)
 
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configuration
+MAX_FILE_SIZE = 50 * 1024 * 1024  # Reduced to 50MB for better stability
+UPLOAD_FOLDER = '/tmp/uploads'  # Use /tmp for Render
+OUTPUT_FOLDER = '/tmp/outputs'  # Use /tmp for Render
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-UPLOAD_FOLDER = 'temp_uploads'
-OUTPUT_FOLDER = 'temp_outputs'
-
-
+# Supported file extensions
 ALLOWED_EXTENSIONS = {
-    'images': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'heic', 'heif'],
-    'documents': ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'html'],
-    'video': ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', 'ogv']
+    'images': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'heic', 'heif'],
+    'documents': ['pdf', 'doc', 'docx', 'txt', 'html'],
+    'video': ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm']
 }
 
-
+# Add audio extensions only if supported
 if AUDIO_SUPPORTED:
-    ALLOWED_EXTENSIONS['audio'] = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma']
+    ALLOWED_EXTENSIONS['audio'] = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a']
 
-
+# Create directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-
-pillow_heif.register_heif_opener()
-
+# Register HEIF support
+try:
+    pillow_heif.register_heif_opener()
+except:
+    print("HEIF support not available")
 
 class FileConverter:
     def __init__(self):
@@ -100,7 +101,7 @@ class FileConverter:
                 return self._convert_document(input_path, output_path, output_format, **kwargs)
             elif file_type == 'audio':
                 if not AUDIO_SUPPORTED:
-                    return {'success': False, 'error': 'Audio conversion not available in this environment'}
+                    return {'success': False, 'error': 'Audio conversion not available'}
                 return self._convert_audio(input_path, output_path, output_format, quality, **kwargs)
             elif file_type == 'video':
                 return self._convert_video(input_path, output_path, output_format, quality, **kwargs)
@@ -118,7 +119,7 @@ class FileConverter:
         """Convert image files"""
         try:
             with Image.open(input_path) as img:
-              
+                # Handle transparency for JPEG
                 if output_format.lower() in ['jpg', 'jpeg'] and img.mode in ['RGBA', 'LA']:
                     background = Image.new('RGB', img.size, (255, 255, 255))
                     if img.mode == 'RGBA':
@@ -127,17 +128,17 @@ class FileConverter:
                         background.paste(img)
                     img = background
                 
-         
+                # Resize if requested
                 if resize:
                     if maintain_aspect:
                         img.thumbnail(resize, Image.Resampling.LANCZOS)
                     else:
                         img = img.resize(resize, Image.Resampling.LANCZOS)
                 
-       
+                # Fix orientation
                 img = ImageOps.exif_transpose(img)
                 
-             
+                # Save parameters
                 save_params = {'format': output_format.upper()}
                 
                 if output_format.lower() in ['jpg', 'jpeg']:
@@ -191,15 +192,14 @@ class FileConverter:
     def _convert_audio(self, input_path: str, output_path: str, 
                       output_format: str, quality: int = 85, 
                       bitrate: Optional[str] = None) -> Dict:
-        """Convert audio files using FFmpeg as fallback"""
+        """Convert audio files"""
         if not AUDIO_SUPPORTED:
-
-            return self._convert_audio_ffmpeg(input_path, output_path, output_format, quality, bitrate)
+            return {'success': False, 'error': 'Audio conversion not available'}
             
         try:
             audio = AudioSegment.from_file(input_path)
             
-         
+            # Set bitrate based on quality
             if not bitrate:
                 if quality >= 90:
                     bitrate = "320k"
@@ -215,12 +215,6 @@ class FileConverter:
                 'bitrate': bitrate
             }
             
-            
-            if output_format.lower() == 'mp3':
-                export_params['parameters'] = ['-q:a', str(9 - int(quality/10))]
-            elif output_format.lower() == 'ogg':
-                export_params['codec'] = 'libvorbis'
-            
             audio.export(output_path, **export_params)
             
             return {
@@ -233,63 +227,6 @@ class FileConverter:
             
         except Exception as e:
             logger.error(f"Audio conversion error: {str(e)}")
-          
-            return self._convert_audio_ffmpeg(input_path, output_path, output_format, quality, bitrate)
-
-    def _convert_audio_ffmpeg(self, input_path: str, output_path: str, 
-                             output_format: str, quality: int = 85, 
-                             bitrate: Optional[str] = None) -> Dict:
-        """Convert audio files using FFmpeg"""
-        try:
-     
-            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
-            
-            cmd = ['ffmpeg', '-i', input_path, '-y']
-            
-         
-            if not bitrate:
-                if quality >= 90:
-                    bitrate = "320k"
-                elif quality >= 70:
-                    bitrate = "192k"
-                elif quality >= 50:
-                    bitrate = "128k"
-                else:
-                    bitrate = "96k"
-            
-            cmd.extend(['-b:a', bitrate])
-            
-     
-            if output_format.lower() == 'mp3':
-                cmd.extend(['-codec:a', 'libmp3lame'])
-            elif output_format.lower() == 'ogg':
-                cmd.extend(['-codec:a', 'libvorbis'])
-            elif output_format.lower() == 'aac':
-                cmd.extend(['-codec:a', 'aac'])
-            elif output_format.lower() == 'wav':
-                cmd.extend(['-codec:a', 'pcm_s16le'])
-            
-            cmd.append(output_path)
-            
-        
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
-            if result.returncode != 0:
-                raise Exception(f"FFmpeg error: {result.stderr}")
-            
-            return {
-                'success': True,
-                'output_size': os.path.getsize(output_path),
-                'format': output_format.upper(),
-                'bitrate': bitrate
-            }
-            
-        except subprocess.CalledProcessError:
-            return {'success': False, 'error': 'FFmpeg not available for audio conversion'}
-        except subprocess.TimeoutExpired:
-            return {'success': False, 'error': 'Audio conversion timeout'}
-        except Exception as e:
-            logger.error(f"Audio conversion error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
     def _convert_video(self, input_path: str, output_path: str, 
@@ -298,12 +235,12 @@ class FileConverter:
                       fps: Optional[int] = None) -> Dict:
         """Convert video files using FFmpeg"""
         try:
-      
+            # Check if FFmpeg is available
             subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
             
             cmd = ['ffmpeg', '-i', input_path, '-y']
             
-        
+            # Set quality
             if quality >= 90:
                 cmd.extend(['-crf', '18'])
             elif quality >= 70:
@@ -313,15 +250,15 @@ class FileConverter:
             else:
                 cmd.extend(['-crf', '32'])
             
-    
+            # Set resolution
             if resolution:
                 cmd.extend(['-vf', f'scale={resolution}'])
             
-
+            # Set fps
             if fps:
                 cmd.extend(['-r', str(fps)])
             
-       
+            # Set codec based on format
             if output_format.lower() == 'mp4':
                 cmd.extend(['-codec:v', 'libx264', '-codec:a', 'aac'])
             elif output_format.lower() == 'webm':
@@ -331,7 +268,6 @@ class FileConverter:
             
             cmd.append(output_path)
             
-         
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode != 0:
@@ -347,50 +283,78 @@ class FileConverter:
         except subprocess.CalledProcessError:
             return {'success': False, 'error': 'FFmpeg not available for video conversion'}
         except subprocess.TimeoutExpired:
-            logger.error("Video conversion timeout")
             return {'success': False, 'error': 'Video conversion timeout'}
         except Exception as e:
             logger.error(f"Video conversion error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
     def _docx_to_pdf(self, input_path: str, output_path: str) -> Dict:
-        """Convert DOCX to PDF"""
+        """Convert DOCX to PDF with better formatting"""
         try:
-           
+            # Try pypandoc first (best quality)
             try:
-                from docx2pdf import convert
-                convert(input_path, output_path)
-                
+                import pypandoc
+                pypandoc.convert_file(input_path, 'pdf', outputfile=output_path)
                 return {
                     'success': True,
                     'output_size': os.path.getsize(output_path),
                     'format': 'PDF'
                 }
             except ImportError:
-   
-                doc = Document(input_path)
-                
-                c = canvas.Canvas(output_path, pagesize=letter)
-                y = 750
-                
-                for paragraph in doc.paragraphs:
-                    if paragraph.text.strip():
-                       
-                        text = paragraph.text[:80]
-                        c.drawString(50, y, text)
-                        y -= 20
+                pass
+            except Exception as e:
+                logger.warning(f"Pypandoc conversion failed: {e}")
+            
+            # Fallback to improved ReportLab conversion
+            doc = Document(input_path)
+            
+            c = canvas.Canvas(output_path, pagesize=letter)
+            width, height = letter
+            y = height - 50
+            margin = 50
+            line_height = 14
+            
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    # Better text wrapping
+                    text = paragraph.text
+                    max_chars = int((width - 2 * margin) / 6)  # Approximate chars per line
+                    
+                    # Split long lines
+                    words = text.split()
+                    lines = []
+                    current_line = ""
+                    
+                    for word in words:
+                        if len(current_line + word + " ") <= max_chars:
+                            current_line += word + " "
+                        else:
+                            if current_line:
+                                lines.append(current_line.strip())
+                            current_line = word + " "
+                    
+                    if current_line:
+                        lines.append(current_line.strip())
+                    
+                    # Draw each line
+                    for line in lines:
+                        c.drawString(margin, y, line)
+                        y -= line_height
                         if y < 50:
                             c.showPage()
-                            y = 750
-                
-                c.save()
-                
-                return {
-                    'success': True,
-                    'output_size': os.path.getsize(output_path),
-                    'format': 'PDF'
-                }
-                
+                            y = height - 50
+                    
+                    # Add extra space after paragraphs
+                    y -= line_height / 2
+            
+            c.save()
+            
+            return {
+                'success': True,
+                'output_size': os.path.getsize(output_path),
+                'format': 'PDF'
+            }
+            
         except Exception as e:
             logger.error(f"DOCX to PDF conversion error: {str(e)}")
             return {'success': False, 'error': str(e)}
@@ -434,20 +398,51 @@ class FileConverter:
             return {'success': False, 'error': str(e)}
 
     def _txt_to_pdf(self, input_path: str, output_path: str) -> Dict:
-        """Convert TXT to PDF"""
+        """Convert TXT to PDF with better formatting"""
         try:
             c = canvas.Canvas(output_path, pagesize=letter)
-            y = 750
+            width, height = letter
+            y = height - 50
+            margin = 50
+            line_height = 14
             
             with open(input_path, 'r', encoding='utf-8') as txt_file:
                 for line in txt_file:
-               
-                    text = line.strip()[:80]
-                    c.drawString(50, y, text)
-                    y -= 20
+                    text = line.rstrip('\n\r')
+                    if text:
+                        # Better text wrapping
+                        max_chars = int((width - 2 * margin) / 6)
+                        
+                        if len(text) <= max_chars:
+                            c.drawString(margin, y, text)
+                            y -= line_height
+                        else:
+                            # Split long lines
+                            words = text.split()
+                            current_line = ""
+                            
+                            for word in words:
+                                if len(current_line + word + " ") <= max_chars:
+                                    current_line += word + " "
+                                else:
+                                    if current_line:
+                                        c.drawString(margin, y, current_line.strip())
+                                        y -= line_height
+                                        if y < 50:
+                                            c.showPage()
+                                            y = height - 50
+                                    current_line = word + " "
+                            
+                            if current_line:
+                                c.drawString(margin, y, current_line.strip())
+                                y -= line_height
+                    else:
+                        # Empty line - add space
+                        y -= line_height / 2
+                    
                     if y < 50:
                         c.showPage()
-                        y = 750
+                        y = height - 50
             
             c.save()
             
@@ -485,16 +480,28 @@ class FileConverter:
             logger.error(f"PDF to TXT conversion error: {str(e)}")
             return {'success': False, 'error': str(e)}
 
-
-
+# Initialize converter
 converter = FileConverter()
 
+@app.route('/')
+def index():
+    """Root endpoint"""
+    return jsonify({
+        'message': 'File Converter API',
+        'version': '1.0.0',
+        'endpoints': {
+            'convert': '/api/convert',
+            'batch_convert': '/api/batch-convert',
+            'formats': '/api/formats',
+            'health': '/api/health'
+        }
+    })
 
 @app.route('/api/convert', methods=['POST'])
 def convert_file():
     """Convert a single file"""
     try:
-   
+        # Check if file is provided
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
         
@@ -502,7 +509,7 @@ def convert_file():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-      
+        # Get parameters
         output_format = request.form.get('format', '').lower()
         quality = int(request.form.get('quality', 85))
         
@@ -511,18 +518,22 @@ def convert_file():
         fps = request.form.get('fps')
         bitrate = request.form.get('bitrate')
         
-
+        # Validate parameters
         if not output_format:
             return jsonify({'error': 'Output format not specified'}), 400
         
         if not converter.is_supported_file(file.filename):
             return jsonify({'error': 'Unsupported file type'}), 400
         
-    
-        if file.content_length and file.content_length > MAX_FILE_SIZE:
+        # Check file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size > MAX_FILE_SIZE:
             return jsonify({'error': 'File too large'}), 400
         
-
+        # Save uploaded file
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_filename = f"{timestamp}_{filename}"
@@ -530,12 +541,12 @@ def convert_file():
         input_path = os.path.join(UPLOAD_FOLDER, unique_filename)
         file.save(input_path)
         
-      
+        # Create output path
         name_without_ext = os.path.splitext(filename)[0]
         output_filename = f"{name_without_ext}_converted.{output_format}"
         output_path = os.path.join(OUTPUT_FOLDER, f"{timestamp}_{output_filename}")
         
-     
+        # Prepare conversion parameters
         conv_params = {'quality': quality}
         
         if resize:
@@ -557,18 +568,18 @@ def convert_file():
         if bitrate:
             conv_params['bitrate'] = bitrate
         
-     
+        # Convert file
         result = converter.convert_file(
             input_path, output_path, output_format, **conv_params
         )
         
-    
+        # Cleanup input file
         try:
             os.remove(input_path)
         except:
             pass
         
-      
+        # Return result
         if result['success']:
             return jsonify({
                 'success': True,
@@ -583,7 +594,6 @@ def convert_file():
     except Exception as e:
         logger.error(f"Conversion endpoint error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
-
 
 @app.route('/api/download/<filename>')
 def download_file(filename):
@@ -606,7 +616,6 @@ def download_file(filename):
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': 'Download failed'}), 500
-
 
 @app.route('/api/batch-convert', methods=['POST'])
 def batch_convert():
@@ -644,7 +653,7 @@ def batch_convert():
                     input_path, output_path, output_format, quality=quality
                 )
                 
-           
+                # Cleanup input file
                 try:
                     os.remove(input_path)
                 except:
@@ -682,12 +691,10 @@ def batch_convert():
         logger.error(f"Batch conversion error: {str(e)}")
         return jsonify({'error': 'Batch conversion failed'}), 500
 
-
 @app.route('/api/formats')
 def get_supported_formats():
     """Get supported file formats"""
     return jsonify(ALLOWED_EXTENSIONS)
-
 
 @app.route('/api/health')
 def health_check():
@@ -699,22 +706,21 @@ def health_check():
         'supported_formats': ALLOWED_EXTENSIONS
     })
 
-
 def cleanup_old_files():
     """Background task to clean up old files"""
     while True:
         try:
             now = time.time()
             
-         
+            # Clean upload folder
             for filename in os.listdir(UPLOAD_FOLDER):
                 file_path = os.path.join(UPLOAD_FOLDER, filename)
                 if os.path.isfile(file_path):
-                    if now - os.path.getmtime(file_path) > 3600: 
+                    if now - os.path.getmtime(file_path) > 3600:  # 1 hour
                         os.remove(file_path)
                         logger.info(f"Cleaned up old upload: {filename}")
             
-          
+            # Clean output folder
             for filename in os.listdir(OUTPUT_FOLDER):
                 file_path = os.path.join(OUTPUT_FOLDER, filename)
                 if os.path.isfile(file_path):
@@ -725,18 +731,17 @@ def cleanup_old_files():
         except Exception as e:
             logger.error(f"Cleanup error: {str(e)}")
         
-     
+        # Sleep for 5 minutes
         time.sleep(300)
 
-
-
+# Start cleanup thread
 cleanup_thread = threading.Thread(target=cleanup_old_files, daemon=True)
 cleanup_thread.start()
 
-
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     logger.info("Starting File Converter API")
     logger.info(f"Audio support: {AUDIO_SUPPORTED}")
     logger.info(f"Supported formats: {ALLOWED_EXTENSIONS}")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=port)
