@@ -7,3 +7,5 @@ PyPDF2
 reportlab
 mammoth
 pydub
+pyaudioop
+Werkzeug
