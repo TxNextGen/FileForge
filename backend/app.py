@@ -291,21 +291,7 @@ class FileConverter:
     def _docx_to_pdf(self, input_path: str, output_path: str) -> Dict:
         """Convert DOCX to PDF with better formatting"""
         try:
-            # Try pypandoc first (best quality)
-            try:
-                import pypandoc
-                pypandoc.convert_file(input_path, 'pdf', outputfile=output_path)
-                return {
-                    'success': True,
-                    'output_size': os.path.getsize(output_path),
-                    'format': 'PDF'
-                }
-            except ImportError:
-                pass
-            except Exception as e:
-                logger.warning(f"Pypandoc conversion failed: {e}")
-            
-            # Fallback to improved ReportLab conversion
+            # Use ReportLab conversion
             doc = Document(input_path)
             
             c = canvas.Canvas(output_path, pagesize=letter)

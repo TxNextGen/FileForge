@@ -9,5 +9,3 @@ mammoth
 werkzeug
 pydub
 gunicorn
-python-docx2txt
-pypandoc
