@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - FileForge</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="images/forge.png" type="image/x-icon" />
+
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="images/forge.png" alt="FileForge Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>FileForge</h1>
+                    <span class="tagline">Transform any file, anywhere</span>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="index.html">Converter</a>
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact</a>
+            </nav>
+        </header>
+
+        <main class="faq-content">
+            <section class="faq-hero">
+                <h1>Frequently Asked Questions</h1>
+                <p>Find answers to common questions about FileForge and file conversion</p>
+            </section>
+
+         
+
+            <div class="faq-categories">
+                <div class="category-card">
+                    <div class="category-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </div>
+                    <h3>File Upload</h3>
+                    <p>Questions about uploading and selecting files</p>
+                </div>
+                <div class="category-card">
+                    <div class="category-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23,4 23,10 17,10"/>
+                            <polyline points="1,20 1,14 7,14"/>
+                            <path d="M20.49,9A9,9,0,0,0,5.64,5.64L1,10"/>
+                            <path d="M3.51,15a9,9,0,0,0,14.85,3.36L23,14"/>
+                        </svg>
+                    </div>
+                    <h3>Conversion</h3>
+                    <p>Learn about our conversion process and formats</p>
+                </div>
+                <div class="category-card">
+                    <div class="category-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h3>Security</h3>
+                    <p>Information about privacy and file security</p>
+                </div>
+            </div>
+
+            <section class="faq-section">
+                <h2>General Questions</h2>
+                
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        What is FileForge?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>FileForge is a powerful online file conversion tool that allows you to convert between various file formats including images, documents, audio, and video files. Our platform supports over 200 different file formats and provides high-quality conversions with customizable settings.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        Is FileForge free to use?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, FileForge offers a free tier that allows you to convert files up to 100MB in size with basic conversion options. We also offer premium plans with larger file size limits, batch processing, and advanced features for power users.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        What file formats are supported?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>FileForge supports over 200 file formats including:</p>
+                        <p><strong>Images:</strong> JPG, PNG, GIF, WebP, BMP, SVG, TIFF, ICO</p>
+                        <p><strong>Documents:</strong> PDF, DOCX, TXT, RTF, ODT, HTML</p>
+                        <p><strong>Audio:</strong> MP3, WAV, FLAC, AAC, OGG, M4A</p>
+                        <p><strong>Video:</strong> MP4, AVI, MOV, MKV, WMV, FLV</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="faq-section">
+                <h2>File Upload & Processing</h2>
+                
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        What is the maximum file size I can upload?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Free users can upload files up to 100MB in size. Premium users can upload files up to 1GB. If you need to convert larger files, please contact our support team for assistance.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        How long does the conversion process take?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Conversion times vary depending on file size, format, and current server load. Most conversions complete within 30 seconds to 2 minutes. Larger files or complex conversions may take longer.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        Can I convert multiple files at once?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, FileForge supports batch conversion. You can upload multiple files and convert them all to the same format simultaneously. This feature is available for both free and premium users.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="faq-section">
+                <h2>Security & Privacy</h2>
+                
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        Are my files secure?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, your files are completely secure. We use SSL encryption for all file transfers and store files on secure servers. All uploaded files are automatically deleted from our servers after 24 hours.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        Do you store my files permanently?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No, we do not store your files permanently. All uploaded files and converted files are automatically deleted from our servers after 24 hours. We recommend downloading your converted files immediately after conversion.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        Can other users access my files?
+                        <svg class="faq-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No, your files are completely private. Each file is assigned a unique, random identifier that only you have access to. No other users can access your files, and we never share your files with third parties.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="contact-section">
+                <h2>Still Have Questions?</h2>
+                <p>Can't find the answer you're looking for? Our support team is here to help.</p>
+                <a href="contact.html" class="contact-button">Contact Support</a>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>FileForge</h3>
+                    <p>The ultimate file conversion tool for all your needs.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Converter</a></li>
+                        <li><a href="about.html">About</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Help</h4>
+                    <ul>
+                        <li><a href="convert.html">How to Convert</a></li>
+                        <li><a href="FAQ.html">FAQ</a></li>
+                        <li><a href="contact.html">Contact</a></l>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 FileForge. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function toggleFAQ(button) {
+            const faqItem = button.parentElement;
+            const isActive = faqItem.classList.contains('active');
+            
+       
+            document.querySelectorAll('.faq-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            if (!isActive) {
+                faqItem.classList.add('active');
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const faqItems = document.querySelectorAll('.faq-item');
+            
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question').textContent.toLowerCase();
+                const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+                
+                if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
